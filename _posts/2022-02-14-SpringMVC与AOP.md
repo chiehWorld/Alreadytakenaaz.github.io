@@ -1,0 +1,71 @@
+---
+layout:     post
+title:      git的回滚
+subtitle:   为什么要谨慎使用revert？
+date:       2022-01-18
+author:     Charon
+header-img: https://tse1-mm.cn.bing.net/th/id/R-C.97a97323557a9826966eda4808033abf?rik=%2bPDqHjiv4z1XAg&riu=http%3a%2f%2fwww.logicline.de%2fwordpress%2fwp-content%2fuploads%2f2016%2f04%2fGit-Logo-2Color.png&ehk=Sl7EU730K1VAXwxpozS2Egw9lt32MQdAfq0WpLGXgnM%3d&risl=&pid=ImgRaw&r=0
+catalog: true
+tags:
+    - git
+    - work
+---
+
+
+# 前言
+
+因为某些原因，CodeHub上提交的代码行数超过500行后，能统计到的数据就会很难看。于是在看错了一次通知之后，我提交了530行代码。
+
+## Git的回退方式
+CodeHub和其他git平台一样，提供了网页端的revert和reset操作。我并没有接触过这两种操作，于是善用翻译工具了解到，revert大概是回退的意思，而reset则看起来就不太合理。
+的确，这两者都有回滚的功能，但在具体形式上又有点区别。
+
+git revert 和 git reset的区别 
+1. git revert是用一次新的commit来回滚之前的commit，git reset是直接删除指定的commit。 
+2. 在回滚这一操作上看，效果差不多。但是在日后继续merge以前的老版本时有区别。因为git revert是用一次逆向的commit“中和”之前的提交，因此日后合并老的branch时，导致这部分改变不会再次出现，但是git reset是之间把某些commit在某个branch上删除，因而和老的branch再次merge时，这些被回滚的commit应该还会被引入。 
+3. git reset 是把HEAD向后移动了一下，而git revert是HEAD继续前进，只是新的commit的内容和要revert的内容正好相反，能够抵消要被revert的内容。
+
+## 重新提交
+由于revert的特性，原来的develop分支已经存在已合并代码的分支，进行一次逆向合并（而非撤销）后，develop与我的分支差异只剩下了280行。
+虽然不能理解这两种方式有多少区别，我检查了develop分支的代码，发现：对文件进行修改的操作依然被检测出来，但新增到git的文件没有被检测到。然而在develop分支里，新增到git的文件并不存在。
+至少在这一点上，revert还是敬业的。
+
+## 解决方法
+我错怪CodeHub了，虽然它有时候会卡，甚至没有Gitee好用，但是它至少忠实地完成了操作。
+在咨询了平台维护的同事之后（开始那位同事甚至也不能理解这种操作），我找到了解决方法：
+不要从develop分支签出代码，转而新建工程，再将代码导入，不要留下提交记录。再次执行合并时，所有的操作都和之前提交一样了————530行不多不少。
+费劲改到500行以下提交，这下正常了。
+
+>这也得益于git的原子化操作。
+>感谢Linus！
+
+## 补充用法（1）
+git revert 撤销 某次操作，此次操作之前和之后的commit和history都会保留，并且把这次撤销
+作为一次最新的提交
+    * git revert HEAD                  撤销前一次 commit
+    * git revert HEAD^               撤销前前一次 commit
+    * git revert commit （比如：fa042ce57ebbe5bb9c8db709f719cec2c58ee7ff）撤销指定的版本，撤销也会作为一次提交进行保存。
+git revert是提交一个新的版本，将需要revert的版本的内容再反向修改回去，
+版本会递增，不影响之前提交的内容
+
+**sourceTree** 中 **revert** 译为**`提交回滚`**，作用为忽略你指定的版本，然后提交一个新的版本。新的版本中已近删除了你所指定的版本。
+**reset** 为 **重置到这次提交**，将内容重置到指定的版本。`git reset` 命令后面是需要加2种参数的：`–-hard` 和 `–-soft`。这条命令默认情况下是 `-–soft`。
+
+执行上述命令时，这该条commit号之 后（时间作为参考点）的所有commit的修改都会退回到git缓冲区中。使用`git status` 命令可以在缓冲区中看到这些修改。而如果加上`-–hard`参数，则缓冲区中不会存储这些修改，git会直接丢弃这部分内容。可以使用 `git push origin HEAD --force` 强制将分区内容推送到远程服务器。
+
+## 补充用法（2）
+用`git reflog`打印你记录你的每一次操作记录
+
+	$ git reflog
+	
+	输出：
+	c7edbfe HEAD@{0}: reset: moving to c7edbfefab1bdbef6cb60d2a7bb97aa80f022687
+	470e9c2 HEAD@{1}: reset: moving to 470e9c2
+	b45959e HEAD@{2}: revert: Revert "add img"
+	470e9c2 HEAD@{3}: reset: moving to 470e9c2
+	2c26183 HEAD@{4}: reset: moving to 2c26183
+	0f67bb7 HEAD@{5}: revert: Revert "add img"
+	
+找到你操作的id，就可以回退到这个版本：
+	
+	$ git reset --hard b45959e
