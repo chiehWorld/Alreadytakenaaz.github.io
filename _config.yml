@@ -3,7 +3,7 @@ title: Charon's Blog
 SEOTitle: Charon's Blog
 header-img: 
 email: getchar404notfound@gmail.com
-description: ""
+description: "（前）东B大学生/菊厂打工人"
 keyword: ""
 url: "http://Alreadytakenaaz.github.io"          # your host, for absolute URL
 baseurl: ""      # for example, '/blog' if your blog hosted on 'host/blog'
@@ -62,8 +62,8 @@ kramdown:
 # Gitalk
 gitalk:
   enable: true    #是否开启Gitalk评论
-  clientID:                             #生成的clientID
-  clientSecret:     #生成的clientSecret
+  clientID:   87390bbd57629bb06016                          #生成的clientID
+  clientSecret:  8232c83bb366bca423f4e60a49452e4f2f52bf8f   #生成的clientSecret
   repo: Alreadytakenaaz.github.io    #仓库名称
   owner: Alreadytakenaaz    #github用户名
   admin: Alreadytakenaaz
@@ -78,7 +78,7 @@ ba_track_id:
 
 # Google Analytics
 ga_track_id: ''            # Format: UA-xxxxxx-xx
-ga_domain: neu-charon.top               # 默认的是 auto, 这里我是自定义了的域名，你如果没有自己的域名，需要改成auto
+ga_domain: charon.world               # 默认的是 auto, 这里我是自定义了的域名，你如果没有自己的域名，需要改成auto
 
 
 
