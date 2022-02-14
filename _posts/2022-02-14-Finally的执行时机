@@ -1,0 +1,35 @@
+---
+layout:     post
+title:      finally的执行时机
+subtitle:   执行哪个return？
+date:       2022-02-14
+author:     Charon
+header-img: 
+catalog: true
+tags:
+    - Java
+    - work
+---
+
+
+## finally的用武之地
+
+finally是被用来干嘛的呢？它是被用来结束一些正常的收尾动作或结束标识。也就是说无论怎么样，finally 都会被最后执行。
+
+例如：一般在操作数据库时，用Jdbc连接池连接数据库后释放资源，需要 finally 来处理。再如 redis 连接，在获取连接池处理完数据的增删改查后，需要释放其连接池。
+
+## 特殊情况
+
+### finally在return之前：
+
+在执行return之前，先执行finally
+
+### finally在return之后时：
+
+肯定不是那种最简单的逻辑。如果finally前面有return，在其内部也有return呢？
+
+finally内部被return后，就不再执行前面那个return。
+
+### 总结
+
+finally在return之后时，先执行finally后，再执行该return；finally内含有return时，直接执行其return后结束；finally在return前，执行完finally后再执行return。
