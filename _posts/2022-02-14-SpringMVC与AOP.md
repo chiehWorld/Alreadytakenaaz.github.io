@@ -3,13 +3,13 @@ layout:     post
 title:      AOP
 subtitle:   SpringMVC中的AOP思想
 date:       2022-02-14
-author:     Charon
+author:     Chieh
 header-img: 
 catalog: true
 tags:
+    - Programming
     - Spring
     - SpringMVC
-    - work
 ---
 
 ## AOP
