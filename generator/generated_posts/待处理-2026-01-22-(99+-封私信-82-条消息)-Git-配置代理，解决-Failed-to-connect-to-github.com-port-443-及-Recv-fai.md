@@ -1,6 +1,6 @@
 ---
 layout:     post
-title:      "(99+ 封私信 / 82 条消息) Git 配置代理，解决 "Failed to connect to github.com port 443" 及 "Recv failure: Connection was reset" 等问题 - 知乎"
+title:      "Git 配置代理，解决 'Failed to connect to github.com port 443' 及 'Recv failure: Connection was reset' 等问题"
 date:       2026-01-22
 author:     Chieh
 header-img: 

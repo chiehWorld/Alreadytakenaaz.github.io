@@ -1,6 +1,6 @@
 ---
 layout:     post
-title:      "maven编译项目的时候出现 Malformed \uxxxx encoding(亲测解决) - 知乎"
+title:      "maven编译项目的时候出现 'Malformed \uxxxx encoding'"
 date:       2026-01-22
 author:     Chieh
 header-img: 
