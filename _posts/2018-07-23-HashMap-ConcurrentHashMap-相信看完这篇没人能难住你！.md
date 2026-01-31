@@ -1,18 +1,15 @@
 ---
 layout:     post
-title:      "HashMap? ConcurrentHashMap? 相信看完这篇没人能难住你！"
-subtitle:   "归档于：技术"
+title:      HashMap? ConcurrentHashMap? 相信看完这篇没人能难住你！
 date:       2018-07-23
 author:     Chieh
 header-img: assets/HashMap-ConcurrentHashMap-相信看完这篇没人能难住你！_header.jpg
 catalog: true
 tags:
-    - Tags
-    - #Java
-    - #concurrent
-    - #ConcurrentHashMap
-    - #HashMap
+    - Java
+    - HashMap
     - 技术
+    - 转载
 ---
 
 ## 前言
@@ -29,7 +26,11 @@ Map 这样的 `Key Value` 在软件开发中是非常经典的结构，常用于
 
 1.7 中的数据结构图：
 
+![](assets/5cd1d2be77958.jpg)
+
 先来看看 1.7 中的实现。
+
+![](assets/5cd1d2bfd6aba.jpg)
 
 这是 HashMap 中比较核心的几个成员变量；看看分别是什么意思？
 
@@ -46,32 +47,25 @@ Map 这样的 `Key Value` 在软件开发中是非常经典的结构，常用于
 由于给定的 HashMap 的容量大小是固定的，比如默认初始化：
 
 ```
-public
- HashMap
-()
- {\n    this
-(DEFAULT_INITIAL_CAPACITY, DEFAULT_LOAD_FACTOR);\n}\n\npublic
- HashMap
-(
-int
- initialCapacity, float
- loadFactor) {\n    if
- (initialCapacity < 0
-)\n        throw
- new
- IllegalArgumentException
-("Illegal initial capacity: "
- +\n                                           initialCapacity);\n    if
- (initialCapacity> MAXIMUM_CAPACITY)\n        initialCapacity = MAXIMUM_CAPACITY;\n    if
- (loadFactor <= 0
- || Float.isNaN(loadFactor))\n        throw
- new
- IllegalArgumentException
-("Illegal load factor: "
- +\n                                           loadFactor);\n\n    this
-.loadFactor = loadFactor;\n    threshold = initialCapacity;\n    init();\n}\n
-```
+public HashMap() {
+    this(DEFAULT_INITIAL_CAPACITY, DEFAULT_LOAD_FACTOR);
+}
 
+public HashMap(int initialCapacity, float loadFactor) {
+    if (initialCapacity < 0)
+        throw new IllegalArgumentException("Illegal initial capacity: " +
+                                           initialCapacity);
+    if (initialCapacity > MAXIMUM_CAPACITY)
+        initialCapacity = MAXIMUM_CAPACITY;
+    if (loadFactor <= 0 || Float.isNaN(loadFactor))
+        throw new IllegalArgumentException("Illegal load factor: " +
+                                           loadFactor);
+
+    this.loadFactor = loadFactor;
+    threshold = initialCapacity;
+    init();
+}
+```
 
 给定的默认容量为 16，负载因子为 0.75。Map 在使用过程中不断的往里面存放数据，当数量达到了 `16 * 0.75 = 12` 就需要将当前 16 的容量进行扩容，而扩容这个过程涉及到 rehash、复制数据等操作，所以非常消耗性能。
 
@@ -82,6 +76,8 @@ int
 `transient Entry<K,V>[] table = (Entry<K,V>[]) EMPTY_TABLE;`
 
 这个数组，那么它又是如何定义的呢？
+
+![](assets/5cd1d2c08e693.jpg)
 
 Entry 是 HashMap 中的一个内部类，从他的成员变量很容易看出：
 
@@ -95,32 +91,29 @@ Entry 是 HashMap 中的一个内部类，从他的成员变量很容易看出�
 #### put 方法
 
 ```
-public
- V put
-(K key, V value)
- {\n    if
- (table == EMPTY_TABLE) {\n        inflateTable(threshold);\n    }\n    if
- (key == null
-)\n        return
- putForNullKey(value);\n    int
- hash
- =
- hash(key);\n    int
- i
- =
- indexFor(hash, table.length);\n    for
- (Entry<K,V> e = table[i]; e != null
-; e = e.next) {\n        Object k;\n        if
- (e.hash == hash && ((k = e.key) == key || key.equals(k))) {\n            V
- oldValue
- =
- e.value;\n            e.value = value;\n            e.recordAccess(this
-);\n            return
- oldValue;\n        }\n    }\n\n    modCount++;\n    addEntry(hash, key, value, i);\n    return
- null
-;\n}\n
-```
+public V put(K key, V value) {
+    if (table == EMPTY_TABLE) {
+        inflateTable(threshold);
+    }
+    if (key == null)
+        return putForNullKey(value);
+    int hash = hash(key);
+    int i = indexFor(hash, table.length);
+    for (Entry<K,V> e = table[i]; e != null; e = e.next) {
+        Object k;
+        if (e.hash == hash && ((k = e.key) == key || key.equals(k))) {
+            V oldValue = e.value;
+            e.value = value;
+            e.recordAccess(this);
+            return oldValue;
+        }
+    }
 
+    modCount++;
+    addEntry(hash, key, value, i);
+    return null;
+}
+```
 
 * 判断当前数组是否需要初始化。\n
 * 如果 key 为空，则 put 一个空值进去。\n
@@ -130,26 +123,22 @@ public
 * 如果桶是空的，说明当前位置没有数据存入；新增一个 Entry 对象写入当前位置。
 
 ```
-void
- addEntry
-(
-int
- hash, K key, V value, int
- bucketIndex) {\n    if
- ((size>= threshold) && (null
- != table[bucketIndex])) {\n        resize(2
- * table.length);\n        hash = (null
- != key) ? hash(key) : 0
-;\n        bucketIndex = indexFor(hash, table.length);\n    }\n\n    createEntry(hash, key, value, bucketIndex);\n}\n\nvoid
- createEntry
-(
-int
- hash, K key, V value, int
- bucketIndex) {\n    Entry<K,V> e = table[bucketIndex];\n    table[bucketIndex] = new
- Entry
-<>(hash, key, value, e);\n    size++;\n}\n
-```
+void addEntry(int hash, K key, V value, int bucketIndex) {
+    if ((size >= threshold) && (null != table[bucketIndex])) {
+        resize(2 * table.length);
+        hash = (null != key) ? hash(key) : 0;
+        bucketIndex = indexFor(hash, table.length);
+    }
 
+    createEntry(hash, key, value, bucketIndex);
+}
+
+void createEntry(int hash, K key, V value, int bucketIndex) {
+    Entry<K,V> e = table[bucketIndex];
+    table[bucketIndex] = new Entry<>(hash, key, value, e);
+    size++;
+}
+```
 
 当调用 addEntry 写入 Entry 时需要判断是否需要扩容。
 
@@ -162,37 +151,31 @@ int
 再来看看 get 函数：
 
 ```
-public
- V get
-(Object key)
- {\n    if
- (key == null
-)\n        return
- getForNullKey();\n    Entry<K,V> entry = getEntry(key);\n\n    return
- null
- == entry ? null
- : entry.getValue();\n}\n\nfinal
- Entry<K,V> getEntry
-(Object key)
- {\n    if
- (size == 0
-) {\n        return
- null
-;\n    }\n\n    int
- hash
- =
- (key == null
-) ? 0
- : hash(key);\n    for
- (Entry<K,V> e = table[indexFor(hash, table.length)];\n         e != null
-;\n         e = e.next) {\n        Object k;\n        if
- (e.hash == hash &&\n            ((k = e.key) == key || (key != null
- && key.equals(k))))\n            return
- e;\n    }\n    return
- null
-;\n}\n
-```
+public V get(Object key) {
+    if (key == null)
+        return getForNullKey();
+    Entry<K,V> entry = getEntry(key);
 
+    return null == entry ? null : entry.getValue();
+}
+
+final Entry<K,V> getEntry(Object key) {
+    if (size == 0) {
+        return null;
+    }
+
+    int hash = (key == null) ? 0 : hash(key);
+    for (Entry<K,V> e = table[indexFor(hash, table.length)];
+         e != null;
+         e = e.next) {
+        Object k;
+        if (e.hash == hash &&
+            ((k = e.key) == key || (key != null && key.equals(k))))
+            return e;
+    }
+    return null;
+}
+```
 
 * 首先也是根据 key 计算出 hashcode，然后定位到具体的桶中。\n
 * 判断该位置是否为链表。\n
@@ -212,42 +195,40 @@ public
 
 1.8 HashMap 结构图：
 
+![](assets/5cd1d2c1c1cd7.jpg)
+
 先来看看几个核心的成员变量：
 
 ```
-static
- final
- int
- DEFAULT_INITIAL_CAPACITY
- =
- 1
- << 4
-; \n\n\n\n\n\n\nstatic
- final
- int
- MAXIMUM_CAPACITY
- =
- 1
- << 30
-;\n\n\n\n\nstatic
- final
- float
- DEFAULT_LOAD_FACTOR
- =
- 0.75f
-;\n\nstatic
- final
- int
- TREEIFY_THRESHOLD
- =
- 8
-;\n\ntransient
- Node<K,V>[] table;\n\n\n\n\n\ntransient
- Set<Map.Entry<K,V>> entrySet;\n\n\n\n\ntransient
- int
- size;\n
-```
+static final int DEFAULT_INITIAL_CAPACITY = 1 << 4; // aka 16
 
+/**
+ * The maximum capacity, used if a higher value is implicitly specified
+ * by either of the constructors with arguments.
+ * MUST be a power of two <= 1<<30.
+ */
+static final int MAXIMUM_CAPACITY = 1 << 30;
+
+/**
+ * The load factor used when none specified in constructor.
+ */
+static final float DEFAULT_LOAD_FACTOR = 0.75f;
+
+static final int TREEIFY_THRESHOLD = 8;
+
+transient Node<K,V>[] table;
+
+/**
+ * Holds cached entrySet(). Note that AbstractMap fields are used
+ * for keySet() and values().
+ */
+transient Set<Map.Entry<K,V>> entrySet;
+
+/**
+ * The number of key-value mappings contained in this map.
+ */
+transient int size;
+```
 
 和 1.7 大体上都差不多，还是有几个重要的区别：
 
@@ -257,6 +238,8 @@ static
 Node 的核心组成其实也是和 1.7 中的 HashEntry 一样，存放的都是 `key value hashcode next` 等数据。
 
 再来看看核心方法。
+
+![](assets/5cd1d2c378090.jpg)
 
 #### put 方法
 
@@ -275,39 +258,30 @@ Node 的核心组成其实也是和 1.7 中的 HashEntry 一样，存放的都�
 #### get 方法
 
 ```
-\npublic
- V get
-(Object key)
- {\n    Node<K,V> e;\n    return
- (e = getNode(hash(key), key)) == null
- ? null
- : e.value;\n}\n\nfinal
- Node<K,V> getNode
-(
-int
- hash, Object key) {\n    Node<K,V>[] tab; Node<K,V> first, e; int
- n; K k;\n    if
- ((tab = table) != null
- && (n = tab.length) > 0
- &&\n        (first = tab[(n - 1
-) & hash]) != null
-) {\n        if
- (first.hash == hash && \n            ((k = first.key) == key || (key != null
- && key.equals(k))))\n            return
- first;\n        if
- ((e = first.next) != null
-) {\n            if
- (first instanceof
- TreeNode)\n                return
- ((TreeNode<K,V>)first).getTreeNode(hash, key);\n            do
- {\n                if
- (e.hash == hash &&\n                    ((k = e.key) == key || (key != null
- && key.equals(k))))\n                    return
- e;\n            } while
- ((e = e.next) != null
-);\n        }\n    }\n    return
- null
-;\n}\n
+public V get(Object key) {
+    Node<K,V> e;
+    return (e = getNode(hash(key), key)) == null ? null : e.value;
+}
+
+final Node<K,V> getNode(int hash, Object key) {
+    Node<K,V>[] tab; Node<K,V> first, e; int n; K k;
+    if ((tab = table) != null && (n = tab.length) > 0 &&
+        (first = tab[(n - 1) & hash]) != null) {
+        if (first.hash == hash && // always check first node
+            ((k = first.key) == key || (key != null && key.equals(k))))
+            return first;
+        if ((e = first.next) != null) {
+            if (first instanceof TreeNode)
+                return ((TreeNode<K,V>)first).getTreeNode(hash, key);
+            do {
+                if (e.hash == hash &&
+                    ((k = e.key) == key || (key != null && key.equals(k))))
+                    return e;
+            } while ((e = e.next) != null);
+        }
+    }
+    return null;
+}
 ```
 
 
@@ -325,27 +299,16 @@ get 方法看起来就要简单许多了。
 但是 HashMap 原有的问题也都存在，比如在并发场景下使用时容易出现死循环。
 
 ```
-final
- HashMap<String, String> map = new
- HashMap
-<String, String>();\nfor
- (int
- i
- =
- 0
-; i < 1000
-; i++) {\n    new
- Thread
-(new
- Runnable
-() {\n        \n        public
- void
- run
-()
- {\n            map.put(UUID.randomUUID().toString(), ""
-);\n        }\n    }).start();\n}\n
+final HashMap<String, String> map = new HashMap<String, String>();
+for (int i = 0; i < 1000; i++) {
+    new Thread(new Runnable() {
+        @Override
+        public void run() {
+            map.put(UUID.randomUUID().toString(), "");
+        }
+    }).start();
+}
 ```
-
 
 但是为什么呢？简单分析下。
 
@@ -353,21 +316,25 @@ final
 
 如下图：
 
+![](assets/5cd1d2c4ede54.jpg)
+
 ### 遍历方式
 
 还有一个值得注意的是 HashMap 的遍历方式，通常有以下几种：
 
 ```
-Iterator<Map.Entry<String, Integer>> entryIterator = map.entrySet().iterator();\n        while
- (entryIterator.hasNext()) {\n            Map.Entry<String, Integer> next = entryIterator.next();\n            System.out.println("key="
- + next.getKey() + " value="
- + next.getValue());\n        }\n        \nIterator<String> iterator = map.keySet().iterator();\n        while
- (iterator.hasNext()){\n            String
- key
- =
- iterator.next();\n            System.out.println("key="
- + key + " value="
- + map.get(key));\n\n        }\n
+Iterator<Map.Entry<String, Integer>> entryIterator = map.entrySet().iterator();
+        while (entryIterator.hasNext()) {
+            Map.Entry<String, Integer> next = entryIterator.next();
+            System.out.println("key=" + next.getKey() + " value=" + next.getValue());
+        }
+        
+Iterator<String> iterator = map.keySet().iterator();
+        while (iterator.hasNext()){
+            String key = iterator.next();
+            System.out.println("key=" + key + " value=" + map.get(key));
+
+        }
 ```
 
 
@@ -389,51 +356,45 @@ ConcurrentHashMap 同样也分为 1.7 、1.8 版，两者在实现上略有不�
 
 先来看看 1.7 的实现，下面是他的结构图：
 
+![](assets/5cd1d2c5ce95c.jpg)
+
 如图所示，是由 Segment 数组、HashEntry 组成，和 HashMap 一样，仍然是数组加链表。
 
 它的核心成员变量：
 
 ```
-\n\n\nfinal
- Segment<K,V>[] segments;\n\ntransient
- Set<K> keySet;\ntransient
- Set<Map.Entry<K,V>> entrySet;\n
-```
+/**
+ * Segment 数组，存放数据时首先需要定位到具体的 Segment 中。
+ */
+final Segment<K,V>[] segments;
 
+transient Set<K> keySet;
+transient Set<Map.Entry<K,V>> entrySet;
+```
 
 Segment 是 ConcurrentHashMap 的一个内部类，主要的组成如下：
 
 ```
-static
- final
- class
- Segment
-<K,V> extends
- ReentrantLock
- implements
- Serializable
- {\n\n       private
- static
- final
- long
- serialVersionUID
- =
- 2249069246763182397L
-;\n       \n       \n       transient
- volatile
- HashEntry<K,V>[] table;\n\n       transient
- int
- count;\n\n       transient
- int
- modCount;\n\n       transient
- int
- threshold;\n\n       final
- float
- loadFactor;\n       \n}\n
+static final class Segment<K,V> extends ReentrantLock implements Serializable {
+
+    private static final long serialVersionUID = 2249069246763182397L;
+       
+    // 和 HashMap 中的 HashEntry 作用一样，真正存放数据的桶
+    transient volatile HashEntry<K,V>[] table;
+
+    transient int count;
+
+    transient int modCount;
+
+    transient int threshold;
+
+    final float loadFactor; 
+}
 ```
 
-
 看看其中 HashEntry 的组成：
+
+![](assets/5cd1d2c635c69.jpg)
 
 和 HashMap 非常类似，唯一的区别就是其中的核心数据如 value ，以及链表都是 volatile 修饰的，保证了获取时的可见性。
 
@@ -444,74 +405,78 @@ static
 #### put 方法
 
 ```
-public
- V put
-(K key, V value)
- {\n    Segment<K,V> s;\n    if
- (value == null
-)\n        throw
- new
- NullPointerException
-();\n    int
- hash
- =
- hash(key);\n    int
- j
- =
- (hash>>> segmentShift) & segmentMask;\n    if
- ((s = (Segment<K,V>)UNSAFE.getObject          \n         (segments, (j <<SSHIFT) + SBASE)) == null
-) \n        s = ensureSegment(j);\n    return
- s.put(key, hash, value, false
-);\n}\n
+public V put(K key, V value) {
+    Segment<K,V> s;
+    if (value == null)
+        throw new NullPointerException();
+    int hash = hash(key);
+    int j = (hash >>> segmentShift) & segmentMask;
+    if ((s = (Segment<K,V>)UNSAFE.getObject          // nonvolatile; recheck
+         (segments, (j << SSHIFT) + SBASE)) == null) //  in ensureSegment
+        s = ensureSegment(j);
+    return s.put(key, hash, value, false);
+}
 ```
 
 
 首先是通过 key 定位到 Segment，之后在对应的 Segment 中进行具体的 put。
 
 ```
-final
- V put
-(K key, 
-int
- hash, V value, boolean
- onlyIfAbsent) {\n    HashEntry<K,V> node = tryLock() ? null
- :\n        scanAndLockForPut(key, hash, value);\n    V oldValue;\n    try
- {\n        HashEntry<K,V>[] tab = table;\n        int
- index
- =
- (tab.length - 1
-) & hash;\n        HashEntry<K,V> first = entryAt(tab, index);\n        for
- (HashEntry<K,V> e = first;;) {\n            if
- (e != null
-) {\n                K k;\n                if
- ((k = e.key) == key ||\n                    (e.hash == hash && key.equals(k))) {\n                    oldValue = e.value;\n                    if
- (!onlyIfAbsent) {\n                        e.value = value;\n                        ++modCount;\n                    }\n                    break
-;\n                }\n                e = e.next;\n            }\n            else
- {\n                if
- (node != null
-)\n                    node.setNext(first);\n                else
-\n                    node = new
- HashEntry
-<K,V>(hash, key, value, first);\n                int
- c
- =
- count + 1
-;\n                if
- (c> threshold && tab.length <MAXIMUM_CAPACITY)\n                    rehash(node);\n                else
-\n                    setEntryAt(tab, index, node);\n                ++modCount;\n                count = c;\n                oldValue = null
-;\n                break
-;\n            }\n        }\n    } finally
- {\n        unlock();\n    }\n    return
- oldValue;\n}\n
+final V put(K key, int hash, V value, boolean onlyIfAbsent) {
+    HashEntry<K,V> node = tryLock() ? null :
+        scanAndLockForPut(key, hash, value);
+    V oldValue;
+    try {
+        HashEntry<K,V>[] tab = table;
+        int index = (tab.length - 1) & hash;
+        HashEntry<K,V> first = entryAt(tab, index);
+        for (HashEntry<K,V> e = first;;) {
+            if (e != null) {
+                K k;
+                if ((k = e.key) == key ||
+                    (e.hash == hash && key.equals(k))) {
+                    oldValue = e.value;
+                    if (!onlyIfAbsent) {
+                        e.value = value;
+                        ++modCount;
+                    }
+                    break;
+                }
+                e = e.next;
+            }
+            else {
+                if (node != null)
+                    node.setNext(first);
+                else
+                    node = new HashEntry<K,V>(hash, key, value, first);
+                int c = count + 1;
+                if (c > threshold && tab.length < MAXIMUM_CAPACITY)
+                    rehash(node);
+                else
+                    setEntryAt(tab, index, node);
+                ++modCount;
+                count = c;
+                oldValue = null;
+                break;
+            }
+        }
+    } finally {
+        unlock();
+    }
+    return oldValue;
+}
 ```
-
 
 虽然 HashEntry 中的 value 是用 volatile 关键词修饰的，但是并不能保证并发的原子性，所以 put 操作时仍然需要加锁处理。
 
 首先第一步的时候会尝试获取锁，如果获取失败肯定就有其他线程存在竞争，则利用 `scanAndLockForPut()` 自旋获取锁。
 
+![](assets/5cd1d2cc3c982.jpg)
+
 1. 尝试自旋获取锁。
 2. 如果重试的次数达到了 `MAX_SCAN_RETRIES` 则改为阻塞锁获取，保证能获取成功。
+
+![](assets/5cd1d2cd25c37.jpg)
 
 再结合图看看 put 的流程。
 
@@ -523,29 +488,24 @@ int
 #### get 方法
 
 ```
-public
- V get
-(Object key)
- {\n    Segment<K,V> s; \n    HashEntry<K,V>[] tab;\n    int
- h
- =
- hash(key);\n    long
- u
- =
- (((h>>> segmentShift) & segmentMask) <<SSHIFT) + SBASE;\n    if
- ((s = (Segment<K,V>)UNSAFE.getObjectVolatile(segments, u)) != null
- &&\n        (tab = s.table) != null
-) {\n        for
- (HashEntry<K,V> e = (HashEntry<K,V>) UNSAFE.getObjectVolatile\n                 (tab, ((long
-)(((tab.length - 1
-) & h)) <<TSHIFT) + TBASE);\n             e != null
-; e = e.next) {\n            K k;\n            if
- ((k = e.key) == key || (e.hash == h && key.equals(k)))\n                return
- e.value;\n        }\n    }\n    return
- null
-;\n}\n
+public V get(Object key) {
+    Segment<K,V> s; // manually integrate access methods to reduce overhead
+    HashEntry<K,V>[] tab;
+    int h = hash(key);
+    long u = (((h >>> segmentShift) & segmentMask) << SSHIFT) + SBASE;
+    if ((s = (Segment<K,V>)UNSAFE.getObjectVolatile(segments, u)) != null &&
+        (tab = s.table) != null) {
+        for (HashEntry<K,V> e = (HashEntry<K,V>) UNSAFE.getObjectVolatile
+                 (tab, ((long)(((tab.length - 1) & h)) << TSHIFT) + TBASE);
+             e != null; e = e.next) {
+            K k;
+            if ((k = e.key) == key || (e.hash == h && key.equals(k)))
+                return e.value;
+        }
+    }
+    return null;
+}
 ```
-
 
 get 逻辑比较简单：
 
@@ -565,9 +525,13 @@ ConcurrentHashMap 的 get 方法是非常高效的，因为整个过程都不需
 
 首先来看下底层的组成结构：
 
+![](assets/5cd1d2ce33795.jpg)
+
 看起来是不是和 1.8 HashMap 结构类似？
 
 其中抛弃了原有的 Segment 分段锁，而采用了 `CAS + synchronized` 来保证并发安全性。
+
+![](assets/5cd1d2ceebe02.jpg)
 
 也将 1.7 中存放数据的 HashEntry 改为 Node，但作用都是相同的。
 
@@ -577,11 +541,13 @@ ConcurrentHashMap 的 get 方法是非常高效的，因为整个过程都不需
 
 重点来看看 put 函数：
 
-* 根据 key 计算出 hashcode 。\n
-* 判断是否需要进行初始化。\n
-* f 即为当前 key 定位出的 Node，如果为空表示当前位置可以写入数据，利用 CAS 尝试写入，失败则自旋保证成功。\n 即为当前 key 定位出的 Node，如果为空表示当前位置可以写入数据，利用 CAS 尝试写入，失败则自旋保证成功。
-* 如果当前位置的 hashcode == MOVED == -1 ,则需要进行扩容。\n ,则需要进行扩容。
-* 如果都不满足，则利用 synchronized 锁写入数据。\n
+![](assets/5cd1d2cfc3293.jpg)
+
+* 根据 key 计算出 hashcode。
+* 判断是否需要进行初始化。
+* f 即为当前 key 定位出的 Node，如果为空表示当前位置可以写入数据，利用 CAS 尝试写入，失败则自旋保证成功。即为当前 key 定位出的 Node，如果为空表示当前位置可以写入数据，利用 CAS 尝试写入，失败则自旋保证成功。
+* 如果当前位置的 hashcode == MOVED == -1 ,则需要进行扩容。
+* 如果都不满足，则利用 synchronized 锁写入数据。
 * 如果数量大于 `TREEIFY_THRESHOLD` 则要转换为红黑树。
 
 #### get 方法
@@ -612,12 +578,6 @@ ConcurrentHashMap 的 get 方法是非常高效的，因为整个过程都不需
 同时也能学习 JDK 作者大牛们的优化思路以及并发解决方案。
 
 > 其实写这篇的前提是源于 GitHub 上的一个 Issues，也希望大家能参与进来，共同维护好这个项目。
-
-## 号外
-
-最近在总结一些 Java 相关的知识点，感兴趣的朋友可以一起维护。
-
-欢迎关注公众号一起交流：
 
 ---
 > 参考链接：[https://crossoverjie.top/2018/07/23/java-senior/ConcurrentHashMap/](https://crossoverjie.top/2018/07/23/java-senior/ConcurrentHashMap/)
